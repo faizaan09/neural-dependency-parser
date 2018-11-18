@@ -106,50 +106,30 @@ class ParsingSystem:
         
         if t.startswith("L") or t.startswith("R"):
             label = t[2:-1]
-            if t.startswith("L"):
-                h = c.getStack(0)
-            else:
-                h = c.getStack(1)
-            if h < 0:
-                return False
-            if h == 0 and label != self.rootLabel:
-                return False
-
-        nStack = c.getStackSize()
-        nBuffer = c.getBufferSize()
-
+        
+        
         if t.startswith("L"):
-            # c.shift()
+        
             left_child = c.getStack(1)
             right_child = c.getStack(0)
             
-            # c.tree.add(right_child, label)
-            # c.tree.set(left_child, right_child, label)
             c.addArc(right_child, left_child, label)
-
             c.removeSecondTopStack()
+
             return c
         elif t.startswith("R"):
 
             left_child = c.getStack(1)
             right_child = c.getStack(0)
             
-            # c.tree.add(left_child, label)
-            # c.tree.set(right_child,left_child,label)
-            c.addArc(left_child, right_child, label)
-            
+            c.addArc(left_child, right_child, label)            
             c.removeTopStack()
 
             return c
 
-            # if self.singleRoot:
-            #     return (nStack > 2) or (nStack == 2 and nBuffer == 0)
-            # else:
-            #     return nStack >= 2
         else:
             c.shift()
             return c
-            # return nBuffer > 0
 
     def numTransitions(self):
         return len(self.transitions)
