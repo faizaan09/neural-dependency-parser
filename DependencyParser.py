@@ -72,56 +72,116 @@ class DependencyParserModel(object):
             ...
             self.loss =
             
-            ===================================================================
+            ==
             """
             
             
-            # import pdb; pdb.set_trace()
-
-            self.embeddings = tf.Variable(embedding_array, dtype=tf.float32)
-            self.batch_size = tf.constant(Config.batch_size, "int32")
-            self.n_Tokens = tf.constant(Config.n_Tokens, "int32")
-            self.embedding_size = tf.constant(Config.embedding_size, "int32")
+            self.embeddings = tf.Variable(embedding_array, dtype=tf.float32,name='all_embeddings', trainable=True)
 
             feature_len = 18 + 18 + 12
             numTrans = parsing_system.numTransitions()
 
-            # self.train_inputs = tf.placeholder("float",[self.batch_size,feature_len,self.embedding_size])
-            # self.train_labels = tf.placeholder("float",[self.batch_size,self.n_Tokens])
+            self.train_inputs = tf.placeholder("int32",[Config.batch_size,feature_len], name= 'train_input')
+            self.train_labels = tf.placeholder("int32",[Config.batch_size,numTrans], name= 'train_labels')
+            self.train_embed = tf.nn.embedding_lookup(self.embeddings, self.train_inputs, name = 'train_embed')
 
-            self.train_inputs = tf.placeholder("int32",[Config.batch_size,feature_len])
-            self.train_labels = tf.placeholder("int32",[Config.batch_size,numTrans])
+            
+            # ###### for best configuration ######
+            # weights_input = tf.Variable(tf.random.truncated_normal([18*Config.embedding_size, Config.hidden_size],stddev=0.08), name='w_in')
+            # biases_input = tf.Variable(tf.random.truncated_normal([Config.hidden_size],stddev=0.08), name='b_in')
+            
+            # weights_h2 = tf.Variable(tf.random.truncated_normal([18*Config.embedding_size, Config.hidden_size], stddev=0.08), name='w_h2')
+            # biases_h2 = tf.Variable(tf.random.truncated_normal([Config.hidden_size], stddev=0.08), name='b_h2')
+            
+            
+            # weights_h3 = tf.Variable(tf.random.truncated_normal([12*Config.embedding_size, Config.hidden_size], stddev=0.008), name='w_h3')
+            # biases_h3 = tf.Variable(tf.random.truncated_normal([Config.hidden_size], stddev=0.08), name='b_h3')
 
+            # weights_output = tf.Variable(tf.random.truncated_normal([3*Config.hidden_size, numTrans], stddev=0.08), name='w_out')
 
-            self.train_embed = tf.nn.embedding_lookup(self.embeddings, self.train_inputs)
+            # self.prediction = self.forward_pass(self.train_embed, weights_input, biases_input, weights_output,    
+            #                                     weights_h2, biases_h2, weights_h3, biases_h3)
+            
+            # ### masked cross entropy loss
+            # mask = self.train_labels > -1
+            # mask = tf.dtypes.cast(mask,'int32')
+            # self.labels = tf.math.multiply(self.train_labels,mask)
+            # self.prediction = tf.math.multiply(self.prediction,tf.dtypes.cast(mask,'float'))
+            
+            # self.labels = tf.math.argmax(self.train_labels,axis=1)
+            # self.cce = tf.losses.sparse_softmax_cross_entropy(self.labels,self.prediction)
 
-            weights_input = tf.Variable(tf.random.normal([feature_len*Config.embedding_size, Config.hidden_size]))
-            biases_input = tf.Variable(tf.random.normal([Config.hidden_size]))
-            weights_output = tf.Variable(tf.random.normal([Config.hidden_size, numTrans]))
+            
+            # self.regularization = tf.nn.l2_loss(weights_input) + tf.nn.l2_loss(biases_input) + tf.nn.l2_loss(weights_output)\
+            #                     + tf.nn.l2_loss(self.train_embed)\
+            #                     + tf.nn.l2_loss(weights_h2) + tf.nn.l2_loss(biases_h2)\
+            #                     + tf.nn.l2_loss(weights_h3) + tf.nn.l2_loss(biases_h3)
+            
+            # self.loss = self.cce + Config.lam * self.regularization
+            
+            # optimizer = tf.train.AdamOptimizer(Config.learning_rate)
 
-            self.prediction = self.forward_pass(self.train_embed, weights_input, biases_input, weights_output)
+            
+            # grads = optimizer.compute_gradients(self.loss)
+            # clipped_grads = [(tf.clip_by_norm(grad, 5), var) for grad, var in grads]
+            # self.app = optimizer.apply_gradients(clipped_grads)            
+            
+            # ###### for best configuration ######
+            
+            # ## multiple hidden layer experiments ###
+            # weights_h2 = tf.Variable(tf.random.truncated_normal([Config.hidden_size, Config.hidden_size], stddev=0.08), name='w_h2')
+            # biases_h2 = tf.Variable(tf.random.truncated_normal([Config.hidden_size], stddev=0.08), name='b_h2')
+            
+            
+            # weights_h3 = tf.Variable(tf.random.truncated_normal([Config.hidden_size, Config.hidden_size], stddev=0.08), name='w_h3')
+            # biases_h3 = tf.Variable(tf.random.truncated_normal([Config.hidden_size], stddev=0.08), name='b_h3')
+            # ### multiple hidden layers experiments ###
+    
+    
+            ####### default configuration #######
+            weights_input = tf.Variable(tf.random.truncated_normal([feature_len*Config.embedding_size, Config.hidden_size],stddev=0.08), name='w_in')
+            biases_input = tf.Variable(tf.random.truncated_normal([Config.hidden_size],stddev=0.08), name='b_in')
 
-            ### masked cross entropy loss
+            weights_output = tf.Variable(tf.random.truncated_normal([Config.hidden_size, numTrans], stddev=0.08), name='w_out')
+
+            self.prediction = self.forward_pass(self.train_embed, weights_input, biases_input, weights_output)    
             
             self.labels = tf.math.argmax(self.train_labels,axis=1)
-            self.cce = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(self.labels,self.prediction))
+            self.cce = tf.losses.sparse_softmax_cross_entropy(self.labels,self.prediction)
 
             
-            self.regularization = tf.nn.l2_loss(weights_input) + tf.nn.l2_loss(biases_input) + tf.nn.l2_loss(weights_output) + tf.nn.l2_loss(self.train_embed) 
+            self.regularization = tf.nn.l2_loss(weights_input) + tf.nn.l2_loss(biases_input) + tf.nn.l2_loss(weights_output)\
+                                + tf.nn.l2_loss(self.train_embed)
+            
             self.loss = self.cce + Config.lam * self.regularization
-            
-            
-            optimizer = tf.train.AdagradOptimizer(Config.learning_rate)
+            optimizer = tf.train.GradientDescentOptimizer(Config.learning_rate)
+
+
             grads = optimizer.compute_gradients(self.loss)
             clipped_grads = [(tf.clip_by_norm(grad, 5), var) for grad, var in grads]
             self.app = optimizer.apply_gradients(clipped_grads)
 
-            # For test data, we only need to get its prediction
-            self.test_inputs = tf.placeholder("int32",[feature_len])
-            test_embed = tf.nn.embedding_lookup(self.embeddings, self.test_inputs)
-            test_embed = tf.reshape(test_embed, [1, -1])
-            self.test_pred = self.forward_pass(test_embed, weights_input, biases_input, weights_output)
+            
 
+            ####### default configuration #######
+            
+
+            
+            # For test data, we only need to get its prediction
+            self.test_inputs = tf.placeholder("int32",[feature_len], name='test_input')
+            test_embed = tf.nn.embedding_lookup(self.embeddings, self.test_inputs)
+            test_embed = tf.reshape(test_embed, [1, -1], name='test_embed')
+            
+            # ###### for best configuration ######
+            # self.test_pred = self.forward_pass(test_embed, weights_input, biases_input, weights_output,
+            #                                    weights_h2, biases_h2, weights_h3, biases_h3)
+
+            # ###### for best configuration ######
+            
+            ####### default configuration #######
+            self.test_pred = self.forward_pass(test_embed, weights_input, biases_input, weights_output)
+            ####### default configuration #######
+            
             # intializer
             self.init = tf.global_variables_initializer()
 
@@ -135,7 +195,6 @@ class DependencyParserModel(object):
         self.init.run()
         print "Initailized"
         average_loss = 0
-        # import pdb; pdb.set_trace()
         for step in range(num_steps):
             start = (step * Config.batch_size) % len(trainFeats)
             end = ((step + 1) * Config.batch_size) % len(trainFeats)
@@ -146,7 +205,7 @@ class DependencyParserModel(object):
 
             feed_dict = {self.train_inputs: batch_inputs, self.train_labels: batch_labels}
 
-            _, loss_val = sess.run([self.app, self.loss], feed_dict=feed_dict)
+            _, loss_val, cce, regu = sess.run([self.app, self.loss, self.cce, self.regularization], feed_dict=feed_dict)
             average_loss += loss_val
 
             if step % Config.display_step == 0:
@@ -213,10 +272,14 @@ class DependencyParserModel(object):
         print "Saved the test results."
         Util.writeConll('result_test.conll', testSents, predTrees)
 
+    ## for best config ## 
+    # def forward_pass(self, embed, weights_input, biases_input, weights_output, weights_h2, biases_h2, weights_h3, biases_h3):
+    ## for best config ##
 
+    ## for default config ##
     def forward_pass(self, embed, weights_input, biases_input, weights_output):
+    ## for default config ##
         """
-
         :param embed:
         :param weights:
         :param biases:
@@ -230,18 +293,65 @@ class DependencyParserModel(object):
 
         =======================================================
         """
-        # import pdb; pdb.set_trace()
         embed = tf.reshape(embed,[embed.shape[0],-1])
+        
+        # ######## For best configuration ##########
+        # word_embed, pos_embed, deb_embed = tf.split(embed,
+        #                                             [18*Config.embedding_size, 18*Config.embedding_size, 12*Config.embedding_size],
+        #                                             axis=1)        
+        
+        # word_h = tf.add(tf.matmul(word_embed,weights_input), biases_input)
+        # pos_h = tf.add(tf.matmul(pos_embed,weights_h2), biases_h2)
+        # deb_h = tf.add(tf.matmul(deb_embed,weights_h3), biases_h3)
+        
+        # # cube activation function for experiment 2.b
+        # # word_act = tf.pow(word_h,3)
+        # # pos_act = tf.pow(pos_h,3)
+        # # deb_act = tf.pow(deb_h,3)
+        
+
+        # word_act = tf.nn.relu(word_h)
+        # pos_act = tf.nn.relu(pos_h)
+        # deb_act = tf.nn.relu(deb_h)
+    
+        
+        # all_hidden = tf.concat([word_act,pos_act,deb_act],axis=1)
+        # # all_hidden = tf.math.multiply(tf.math.multiply(word_act,pos_act),deb_act )
+                
+        # output = tf.matmul(all_hidden,weights_output)
+        # ####### For best configuration ##########
+        
+        ###### For default model + commented out parts for accomodating multiple layers ######
+
         hidden_vals = tf.add(tf.matmul(embed,weights_input), biases_input)
 
+
+        ## options of different activation functions ###
         activation = tf.pow(hidden_vals,3)
+        # activation = tf.nn.relu(hidden_vals)
+        # activation = tf.nn.sigmoid(hidden_vals)
+        # activation = tf.nn.tanh(hidden_vals)
+        
+        # # second hidden layer ##
+        # h2 = tf.add(tf.matmul(activation,weights_h2), biases_h2)
+        # h2_activation = tf.pow(h2,3)
+        # h2_activation = tf.nn.relu(h2)
+        # h2_activation = tf.nn.sigmoid(h2)
+        # h2_activation = tf.nn.tanh(h2)
+        # # second hidden layer ##
+    
+        # third hidden layer ##
+        # h3 = tf.add(tf.matmul(h2_activation,weights_h3), biases_h3)
+        # h3_activation = tf.pow(h3,3)
+        # h3_activation = tf.nn.relu(h3)
+        # h3_activation = tf.nn.sigmoid(h3)
+        # # third hidden layer ##
 
         output = tf.matmul(activation,weights_output)
-
-        output = tf.nn.softmax(output)
-
+        ###### For default model + commented out parts for accomodating multiple layers ######
+        
+        
         return output
-
 
 
 
@@ -394,7 +504,6 @@ def genTrainExamples(sents, trees):
     labels = []
     pbar = ProgressBar()
     for i in pbar(range(len(sents))):
-    # for i in pbar(range(11)):
 
         if trees[i].isProjective():
             c = parsing_system.initialConfiguration(sents[i])
@@ -418,7 +527,7 @@ def genTrainExamples(sents, trees):
                 labels.append(label)
                 c = parsing_system.apply(c, oracle)
             
-            # print(trees[i].equal(c.tree))
+#             print(trees[i].equal(c.tree))
     return features, labels
 
 
@@ -426,6 +535,8 @@ def load_embeddings(filename, wordDict, posDict, labelDict):
     dictionary, word_embeds = pickle.load(open(filename, 'rb'))
 
     embedding_array = np.zeros((len(wordDict) + len(posDict) + len(labelDict), Config.embedding_size))
+    pos_ind = 0
+    dep_ind = 0
     knownWords = wordDict.keys()
     foundEmbed = 0
     for i in range(len(embedding_array)):
@@ -439,8 +550,30 @@ def load_embeddings(filename, wordDict, posDict, labelDict):
         if index >= 0:
             foundEmbed += 1
             embedding_array[i] = word_embeds[index]
+        #### for default behavior ####
         else:
-            embedding_array[i] = np.random.rand(Config.embedding_size) * 0.02 - 0.01
+            # for unknown words, pos and labels
+            embedding_array[i] = np.random.rand(Config.embedding_size) * 0.02 - 0.01            
+          
+        #### for default behavior ####
+
+        ###### for fixed embeddings ########
+        # elif i < len(wordDict):
+        #     #for unknown words
+        #     embedding_array[i] = np.random.rand(Config.embedding_size) * 0.02 - 0.01            
+        
+        # elif pos_ind < len(posDict):
+        #     dummy_emb = [0 for _ in range(Config.embedding_size)]
+        #     dummy_emb[pos_ind] = 1
+        #     embedding_array[i] = dummy_emb[:]
+        #     pos_ind+=1
+        # else:
+        #     dummy_emb = [0 for _ in range(Config.embedding_size)]
+        #     dummy_emb[dep_ind] = 1
+        #     embedding_array[i] = dummy_emb[:]
+        #     dep_ind+=1
+        ###### for fixed embeddings ########
+            
     print "Found embeddings: ", foundEmbed, "/", len(knownWords)
 
     return embedding_array
@@ -470,9 +603,6 @@ if __name__ == '__main__':
 
     print "Generating Training Examples"
     trainFeats, trainLabels = genTrainExamples(trainSents, trainTrees)
-    # import pdb; pdb.set_trace()
-    # with open('trainExamples.pkl','rb') as f:
-    #     trainFeats, trainLabels = pkl.load(f)
     print "Done."
 
     # Build the graph model

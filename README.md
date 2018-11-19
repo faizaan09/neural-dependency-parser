@@ -22,4 +22,6 @@ multiply all such elements in  the train label and prediction with 0. Doing this
 
 For the actuall calculation of the loss, we take the argmax over train labels and use the tensorflow function: tf.losses.sparse_softmax_cross_entropy. For regularization we add the 'tf.nn.l2_loss' of all the elements
 
-5. to 7. Experimentation details added in the report
+5. and 6. Experimentation details added in the report
+
+7. Embeddings are formed by using a onehot vector to represent POS and Dep labels, unknwon word embeddings are still randomly allocated
