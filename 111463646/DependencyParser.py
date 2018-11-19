@@ -138,7 +138,7 @@ class DependencyParserModel(object):
             # ### multiple hidden layers experiments ###
     
     
-            ###### default configuration #######
+            ####### default configuration #######
             weights_input = tf.Variable(tf.random.truncated_normal([feature_len*Config.embedding_size, Config.hidden_size],stddev=0.08), name='w_in')
             biases_input = tf.Variable(tf.random.truncated_normal([Config.hidden_size],stddev=0.08), name='b_in')
 
@@ -178,15 +178,15 @@ class DependencyParserModel(object):
             test_embed = tf.nn.embedding_lookup(self.embeddings, self.test_inputs)
             test_embed = tf.reshape(test_embed, [1, -1], name='test_embed')
             
-            ###### for best configuration ######
+            # ###### for best configuration ######
             # self.test_pred = self.forward_pass(test_embed, weights_input, biases_input, weights_output,
             #                                    weights_h2, biases_h2, weights_h3, biases_h3)
 
-            ###### for best configuration ######
+            # ###### for best configuration ######
             
-            # ####### default configuration #######
+            ####### default configuration #######
             self.test_pred = self.forward_pass(test_embed, weights_input, biases_input, weights_output)
-            # ####### default configuration #######
+            ####### default configuration #######
             
             # intializer
             self.init = tf.global_variables_initializer()
@@ -607,14 +607,14 @@ if __name__ == '__main__':
     parsing_system = ParsingSystem(labelInfo[1:])
     print parsing_system.rootLabel
 
+    print "Generating Training Examples"
+    trainFeats, trainLabels = genTrainExamples(trainSents, trainTrees)
+    print "Done."
 
     # Build the graph model
     graph = tf.Graph()
     model = DependencyParserModel(graph, embedding_array, Config)
 
-    print "Generating Training Examples"
-    trainFeats, trainLabels = genTrainExamples(trainSents, trainTrees)
-    print "Done."
     num_steps = Config.max_iter
     with tf.Session(graph=graph) as sess:
 
